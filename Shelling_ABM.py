@@ -24,20 +24,36 @@ params = {'world_size':(20,20),
           'same_pref_r': 0.4, #red agent's pref for same color neighbours
           'same_pref_b': 0.3, #blue agent's pref for same color neighbours
           'proportion_r': 0.6,
-          'max_iter'  :100,
+          'max_iter'  :3,
           'print_to_screen': True}  #toggle this T/F to print output
 
 class Agent():
     #An agent needs to know if it is happy, needs to be able to move (find a vacancy and fill
     # it), can either check if it'll be happy in the new location, or not and
     # needs to report to World what it did
-        def __init__(self, world, kind, same_pref):
+    def __init__(self, world, kind, same_pref):
         self.world = world
         self.kind = kind
         self.same_pref = same_pref
         self.location = None
-    
+        
     def move(self): 
+        if self.kind == 'red':
+            if self.am_i_happy() == True:
+                return 0
+            elif self.am_i_happy() == False:
+                if self.world.find_vacant(return_all = True) is not None:
+                    return 4
+                elif self.world.find_vacant(return_all = True) is None:
+                    return 2
+        elif self.kind == 'blue':
+            if self.am_i_happy() == True:
+                return 1
+            elif self.am_i_happy() == False:
+                if self.world.find_vacant(return_all = True) is not None:
+                    return 5
+                elif self.world.find_vacant(return_all = True) is None:
+                    return 3
         #moves an agent
         #agent has to know if it is happy to decide if it'll move 
         #agent has to be able to find vacancies (use self.world.find_vacant(...))
@@ -49,11 +65,44 @@ class Agent():
         #return 2 # red unhappy but did not move
         #return 3  # blue unhappy but did not move
         #return 0 # red happy, did not move
-        #return 1 # blue happy, did not move
-
-        pass
+        #return 1 # blue happy, did not move        
 
     def am_i_happy(self, loc=False, neighbor_check=False):
+        if neighbor_check == False:
+            neighbor_kind = []
+            neighbor = self.world.locate_neighbors(self.location)
+            for a in self.world.agents:
+                if neighbor.count(a.location) == True:
+                    neighbor_kind.append(a.kind)
+                else:
+                    pass
+            if self.kind == 'red' and len(neighbor) != 0:
+                if neighbor_kind.count('red')/len(neighbor) >= params['same_pref_r']:
+                    return True
+                else:
+                    return False
+            elif self.kind == 'blue' and len(neighbor) != 0:
+                if neighbor_kind.count('blue')/len(neighbor) >= params['same_pref_b']:
+                    return True
+                else:
+                    return False
+            else: 
+                return False
+        elif neighbor_check == True:
+            neighbor_kind = []
+            neighbor = self.world.locate_neighbors(self.location)
+            for a in self.world.agents:
+                if neighbor.count(a.location) == True:
+                    neighbor_kind.append(a.kind)
+                else:
+                    pass
+            different_neighbor = []
+            for kind in neighbor_kind:
+                if kind == self.kind:
+                    different_neighbor.append(True)
+                else:
+                    different_neighbor.append(False)
+            return different_neighbor
         #this should return a boolean for whether or not an agent is happy at a location
         #if loc is False, use current location, else use specified location
         #for reporting purposes, allow checking of the current number of similar neighbors
@@ -61,8 +110,7 @@ class Agent():
         #if an agent is in a patch with no neighbors at all, treat it as unhappy
         #if len(neighbor_kinds) == 0:
         #    return False
-        pass
-    
+            
     def start_happy_r_b(self):
     #for reporting purposes, allow count of happy before any moves, of red and blue seperately
         if self.am_i_happy and self.kind == 'red':
@@ -88,7 +136,7 @@ class World():
     def build_grid(self, world_size):
         #create the world that the agents can move around on
         locations = [(i,j) for i in range(world_size[0]) for j in range(world_size[1])]
-        return {l:None for l in locations}
+        return {l:None for l in locations} #return a dictionary with value 'None'
 
     def build_agents(self, num_agents, same_pref_r, same_pref_b):
         #generate a list of Agents (with kind and same_preference) that can be iterated over
@@ -238,17 +286,15 @@ class World():
             num_moved_b          = sum([r==5 for r in move_results])
 
             log_of_happy.append(num_happy_at_start)
-            
-            
-
-            
-
+            print(log_of_happy)
             log_of_happy_r.append(num_happy_at_start_r)
             log_of_happy_b.append(num_happy_at_start_b)
             log_of_moved.append(num_moved)
+            print(log_of_moved)
             log_of_moved_r.append(num_moved_r)
             log_of_moved_b.append(num_moved_b)
             log_of_stay .append(num_stayed_unhappy)
+            print(log_of_stay)
             log_of_stay_r.append(num_stayed_unhappy_r)
             log_of_stay_b.append(num_stayed_unhappy_b)
 
@@ -259,6 +305,7 @@ class World():
             elif log_of_moved[-1] == 0 and log_of_stay[-1] > 0:
                 print('Some agents are unhappy, but they cannot find anywhere to move to.  Stopping after iteration {}.'.format(iteration))
                 break
+            
 
         self.reports['log_of_happy']   = log_of_happy
         self.reports['log_of_happy_r'] = log_of_happy_r
@@ -312,6 +359,32 @@ The number of blue agent moves per turn: [0, 45, 8, 2, 2, 1, 0]
 The number of red agents who failed to find a new home: [0, 0, 0, 0, 0, 0, 0]
 The number of blue agents who failed to find a new home: [0, 0, 0, 0, 0, 0, 0]
 '''
+
+
+random.shuffle(world.agents) 
+move_results = [agent.move() for agent in world.agents]
+happy=sum([a.am_i_happy() for a in world.agents])
+different_neighbor = []
+for agent in world.agents:
+    different_neighbor.append(sum([not a for a in agent.am_i_happy(neighbor_check=True)]))
+
+set(move_results)
+set(different_neighbor)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
