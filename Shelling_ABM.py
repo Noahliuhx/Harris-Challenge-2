@@ -2,19 +2,12 @@
 # Schelling Model
 Thomas Schelling (1971) created an agent based model using checker boards to 
 simulate the creation of segregated neighborhoods, in a society where no individual 
-necessarily has a strong preference for segregation.  To see a simulation with a visual 
-component, visit the bottom of this page: http://nifty.stanford.edu/2014/mccown-schelling-model-segregation/
-The following code will replicate his model in Python.  
-We will not create a visual component in this class, though it is well within 
-Python's abilities to do so.  We will use the following guidelines:
+necessarily has a strong preference for segregation. We will use the following 
+simplified guidelines to do the simulation:
 
 1. At least two kinds of agents
 2. Each agent needs a preference for similar neighbors
 3. Each agent gets to move around if preference not met
-
-
-The World class has been made for you, take a look and try to understand how it works
-Your task is to write a function for Agents 
 '''
 
 from numpy import random, mean
@@ -24,7 +17,7 @@ params = {'world_size':(20,20),
           'same_pref_r': 0.4, #red agent's pref for same color neighbours
           'same_pref_b': 0.3, #blue agent's pref for same color neighbours
           'proportion_r': 0.6,
-          'max_iter'  :3,
+          'max_iter'  :10,
           'print_to_screen': True}  #toggle this T/F to print output
 
 class Agent():
@@ -40,77 +33,71 @@ class Agent():
     def move(self): 
         if self.kind == 'red':
             if self.am_i_happy() == True:
-                return 0
+                return 0 #red happy and stays
             elif self.am_i_happy() == False:
-                if self.world.find_vacant(return_all = True) is not None:
-                    return 4
-                elif self.world.find_vacant(return_all = True) is None:
-                    return 2
+                for a in self.world.find_vacant(return_all = True):
+                    if self.am_i_happy(loc = a) == True: #if like new place
+                        self.world.grid[self.location] = None #delete old place
+                        self.location = a 
+                        #give agent a new attribute; refer to attributes of 
+                        #ini_world
+                        return 4 #red moved
+                    elif self.am_i_happy(loc = a) == False:
+                        return 2 #red unhappy but did not move                
+                
         elif self.kind == 'blue':
             if self.am_i_happy() == True:
-                return 1
+                return 1 #blue happy and stays
             elif self.am_i_happy() == False:
-                if self.world.find_vacant(return_all = True) is not None:
-                    return 5
-                elif self.world.find_vacant(return_all = True) is None:
-                    return 3
-        #moves an agent
-        #agent has to know if it is happy to decide if it'll move 
-        #agent has to be able to find vacancies (use self.world.find_vacant(...))
-        #return something that indicates if the agent moved
-
-        #the way it is currently writen:
-        #return 4 #red moved
-        #return 5 #blue moved
-        #return 2 # red unhappy but did not move
-        #return 3  # blue unhappy but did not move
-        #return 0 # red happy, did not move
-        #return 1 # blue happy, did not move        
+                for a in self.world.find_vacant(return_all = True):
+                    if self.am_i_happy(loc = a) == True:
+                        self.world.grid[self.location] = None #delete old place
+                        self.location = a #give agent a new attribute  
+                        return 5 #blue moved
+                    elif self.am_i_happy(loc = a) == False:
+                        return 3 # blue unhappy but did not move
 
     def am_i_happy(self, loc=False, neighbor_check=False):
+        #if loc is False, use current location, else use specified location
+        if loc == False: 
+            location = self.location
+        else:
+            location = loc
+                
+        neighbor_kind = []
+        neighbor = self.world.locate_neighbors(location) 
+        #find at most 8 neighbors
+        for a in self.world.agents:
+            if neighbor.count(a.location) == True: 
+                #compare every agent's location with the given neighbors               
+                neighbor_kind.append(a.kind)
+                #create a list of neighbor's (x,y)
+            else:
+                pass
+            
         if neighbor_check == False:
-            neighbor_kind = []
-            neighbor = self.world.locate_neighbors(self.location)
-            for a in self.world.agents:
-                if neighbor.count(a.location) == True:
-                    neighbor_kind.append(a.kind)
-                else:
-                    pass
             if self.kind == 'red' and len(neighbor) != 0:
                 if neighbor_kind.count('red')/len(neighbor) >= params['same_pref_r']:
+                    #the benchmark of red's preference
                     return True
                 else:
                     return False
             elif self.kind == 'blue' and len(neighbor) != 0:
                 if neighbor_kind.count('blue')/len(neighbor) >= params['same_pref_b']:
+                    #the benchmark of blue's preference
                     return True
                 else:
                     return False
             else: 
+                #if an agent is in a patch with no neighbors at all, treat it 
+                #as unhappy 
                 return False
-        elif neighbor_check == True:
-            neighbor_kind = []
-            neighbor = self.world.locate_neighbors(self.location)
-            for a in self.world.agents:
-                if neighbor.count(a.location) == True:
-                    neighbor_kind.append(a.kind)
-                else:
-                    pass
-            different_neighbor = []
-            for kind in neighbor_kind:
-                if kind == self.kind:
-                    different_neighbor.append(True)
-                else:
-                    different_neighbor.append(False)
-            return different_neighbor
-        #this should return a boolean for whether or not an agent is happy at a location
-        #if loc is False, use current location, else use specified location
-        #for reporting purposes, allow checking of the current number of similar neighbors
-
-        #if an agent is in a patch with no neighbors at all, treat it as unhappy
-        #if len(neighbor_kinds) == 0:
-        #    return False
             
+        elif neighbor_check == True:
+            #for reporting purposes, allow checking of the current number of 
+            #similar neighbors                     
+            return [kind == self.kind for kind in neighbor_kind]
+               
     def start_happy_r_b(self):
     #for reporting purposes, allow count of happy before any moves, of red and blue seperately
         if self.am_i_happy and self.kind == 'red':
@@ -285,16 +272,13 @@ class World():
             num_moved_r          = sum([r==4 for r in move_results])
             num_moved_b          = sum([r==5 for r in move_results])
 
-            log_of_happy.append(num_happy_at_start)
-            print(log_of_happy)
+            log_of_happy.append(num_happy_at_start)        
             log_of_happy_r.append(num_happy_at_start_r)
             log_of_happy_b.append(num_happy_at_start_b)
             log_of_moved.append(num_moved)
-            print(log_of_moved)
             log_of_moved_r.append(num_moved_r)
             log_of_moved_b.append(num_moved_b)
             log_of_stay .append(num_stayed_unhappy)
-            print(log_of_stay)
             log_of_stay_r.append(num_stayed_unhappy_r)
             log_of_stay_b.append(num_stayed_unhappy_b)
 
@@ -344,32 +328,24 @@ world.run()
 
 '''
 sample output
-Everyone is happy!  Stopping after iteration 5.
+Some agents are unhappy, but they cannot find anywhere to move to.  Stopping after iteration 7.
 
 All results begin at time=0 and go in order to the end.
 
-The average number of neighbors an agent has not like them: [3.67, 1.84, 1.44, 1.37, 1.33, 1.31, 1.31]
-The average number of neighbors a red agent has not like them: [3.06, 1.53, 1.2, 1.14, 1.11, 1.09, 1.09]
-The average number of neighbors a blue agent has not like them: [4.59, 2.3, 1.8, 1.71, 1.66, 1.64, 1.64]
-The number of happy agents: [297, 291, 361, 377, 378, 379, 380]
-The number of happy red agents: [228, 184, 217, 227, 228, 228, 228]
-The number of happy blue agents: [152, 107, 144, 150, 150, 151, 152]
-The number of red agent moves per turn: [0, 44, 11, 1, 0, 0, 0]
-The number of blue agent moves per turn: [0, 45, 8, 2, 2, 1, 0]
-The number of red agents who failed to find a new home: [0, 0, 0, 0, 0, 0, 0]
-The number of blue agents who failed to find a new home: [0, 0, 0, 0, 0, 0, 0]
+The average number of neighbors an agent has not like them: [3.75, 2.55, 2.37, 2.36, 2.34, 2.31, 2.29, 2.28, 2.28]
+The average number of neighbors a red agent has not like them: [3.12, 2.12, 1.98, 1.97, 1.95, 1.93, 1.91, 1.9, 1.9]
+The average number of neighbors a blue agent has not like them: [4.68, 3.18, 2.97, 2.95, 2.93, 2.89, 2.86, 2.86, 2.86]
+The number of happy agents: [278, 260, 308, 328, 329, 329, 331, 332, 333]
+The number of happy red agents: [228, 178, 181, 181, 181, 181, 181, 181, 181]
+The number of happy blue agents: [152, 82, 127, 147, 148, 148, 150, 151, 152]
+The number of red agent moves per turn: [0, 5, 0, 0, 0, 0, 0, 0, 0]
+The number of blue agent moves per turn: [0, 66, 25, 5, 4, 4, 2, 1, 0]
+The number of red agents who failed to find a new home: [0, 45, 47, 47, 47, 47, 47, 47, 47]
+The number of blue agents who failed to find a new home: [0, 4, 0, 0, 0, 0, 0, 0, 0]
 '''
 
 
-random.shuffle(world.agents) 
-move_results = [agent.move() for agent in world.agents]
-happy=sum([a.am_i_happy() for a in world.agents])
-different_neighbor = []
-for agent in world.agents:
-    different_neighbor.append(sum([not a for a in agent.am_i_happy(neighbor_check=True)]))
 
-set(move_results)
-set(different_neighbor)
 
 
 
