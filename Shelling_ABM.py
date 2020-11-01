@@ -36,13 +36,13 @@ class Agent():
                 return 0 #red happy and stays
             elif self.am_i_happy() == False:
                 for a in self.world.find_vacant(return_all = True):
-                    if self.am_i_happy(loc = a) == True: #if like new place
+                    if self.am_i_happy() == True: #if like new place
                         self.world.grid[self.location] = None #delete old place
                         self.location = a 
                         #give agent a new attribute; refer to attributes of 
                         #ini_world
                         return 4 #red moved
-                    elif self.am_i_happy(loc = a) == False:
+                    elif self.am_i_happy() == False:
                         return 2 #red unhappy but did not move                
                 
         elif self.kind == 'blue':
@@ -50,11 +50,11 @@ class Agent():
                 return 1 #blue happy and stays
             elif self.am_i_happy() == False:
                 for a in self.world.find_vacant(return_all = True):
-                    if self.am_i_happy(loc = a) == True:
+                    if self.am_i_happy() == True:
                         self.world.grid[self.location] = None #delete old place
                         self.location = a #give agent a new attribute  
                         return 5 #blue moved
-                    elif self.am_i_happy(loc = a) == False:
+                    elif self.am_i_happy() == False:
                         return 3 # blue unhappy but did not move
 
     def am_i_happy(self, loc=False, neighbor_check=False):
